@@ -32,10 +32,17 @@ Zammadは起動時/パッケージ更新時にもpoを読み込みます([公式
   Overview=一覧 / Trigger=トリガー / Escalation=エスカレーション など
 - 誤訳の指摘・改善PRを歓迎します
 
-## 本家への貢献
+## 本家への貢献状況
 
-Zammadの翻訳は[Weblate](https://translations.zammad.org/)で集中管理されています。
-本リポジトリの訳文は、Weblateへ提案する際の下訳としても利用できます。
+Zammadの翻訳は[Weblate](https://translations.zammad.org/)で集中管理されており、
+**本リポジトリの全訳文は2026-09-02にWeblateへ投入済みです**。
+
+- zammad-development/ja: 18.8% → **100.0%**（5,123/5,123・fuzzy 0）
+- zammad-stable/ja: 20.2% → **99.1%**（4,727/4,768）
+
+Weblate上の翻訳は本家のリリースフローで `i18n/zammad.ja.po` に同期されるため、
+今後のZammadリリースでは本家だけで日本語UIが揃う見込みです。それまでの
+現行・旧バージョンには、上の適用手順でこのpoを直接当ててください。
 
 ## ライセンス
 
