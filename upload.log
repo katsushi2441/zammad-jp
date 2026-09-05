@@ -1,0 +1,7 @@
+=== zammad-development
+upload: 200 {"not_found":0,"skipped":965,"accepted":4158,"total":5123,"result":true,"count":5123}
+zammad-development/ja: 5123/5123 (100.0%) fuzzy=0
+=== zammad-stable
+upload: 200 {"not_found":397,"skipped":4726,"accepted":0,"total":5123,"result":false,"count":5123}
+zammad-stable/ja: 4727/4768 (99.1%) fuzzy=21
+ALL_DONE
