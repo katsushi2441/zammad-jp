@@ -3,6 +3,8 @@
 
   check   : .env の各候補パスワードでログイン可否、API トークンの有効性を表示（値は出さない）
   rotate  : ログインできたセッションで API トークンを再生成し、パスワードも変更して .env を更新
+  token   : API トークンの再生成だけ行い .env を更新
+  password: パスワード変更だけ行い .env を更新
 
 秘密は標準出力に出さない。.env はリポジトリ管理外（.gitignore）。
 実行: /home/kojima/work/kgeo/.venv/bin/python scripts/weblate_rotate.py check|rotate
@@ -77,31 +79,38 @@ async def main(cmd):
             await b.close()
             return
         await login(pg, ctx, active)
+        new_tok = []
+        pw_ok = False
+        errs = []
         # --- API トークン再生成 ---
-        await pg.goto(HOST + "/accounts/profile/#api", wait_until="networkidle", timeout=60000)
-        before = set(re.findall(r"wlu_[A-Za-z0-9]{20,}", await pg.content()))
-        csrf = await pg.evaluate("(document.querySelector('input[name=csrfmiddlewaretoken]')||{}).value||''")
-        st = await pg.evaluate(
-            "(async(c)=>{const r=await fetch('/accounts/reset-api-key/',{method:'POST',headers:{'X-CSRFToken':c,'Content-Type':'application/x-www-form-urlencoded'},body:'csrfmiddlewaretoken='+encodeURIComponent(c),credentials:'include'});return r.status;})",
-            csrf,
-        )
-        await pg.goto(HOST + "/accounts/profile/#api", wait_until="networkidle", timeout=60000)
-        after = set(re.findall(r"wlu_[A-Za-z0-9]{20,}", await pg.content()))
-        new_tok = sorted(after - before)
-        print(f"reset-api-key POST → HTTP {st} / 新トークン取得: {bool(new_tok)} / 旧トークン残存: {bool(before & after)}")
+        if cmd in ("rotate", "token"):
+          await pg.goto(HOST + "/accounts/profile/#api", wait_until="networkidle", timeout=60000)
+          before = set(re.findall(r"wlu_[A-Za-z0-9]{20,}", await pg.content()))
+          csrf = await pg.evaluate("(document.querySelector('input[name=csrfmiddlewaretoken]')||{}).value||''")
+          st = await pg.evaluate(
+              "(async(c)=>{const r=await fetch('/accounts/reset-api-key/',{method:'POST',headers:{'X-CSRFToken':c,'Content-Type':'application/x-www-form-urlencoded'},body:'csrfmiddlewaretoken='+encodeURIComponent(c),credentials:'include'});return r.status;})",
+              csrf,
+          )
+          await pg.goto(HOST + "/accounts/profile/#api", wait_until="networkidle", timeout=60000)
+          after = set(re.findall(r"wlu_[A-Za-z0-9]{20,}", await pg.content()))
+          new_tok = sorted(after - before)
+          print(f"reset-api-key POST → HTTP {st} / 新トークン取得: {bool(new_tok)} / 旧トークン残存: {bool(before & after)}")
         # --- パスワード変更 ---
-        new_pw = secrets.token_urlsafe(18)
-        await pg.goto(HOST + "/accounts/password/", wait_until="networkidle", timeout=60000)
-        names = await pg.evaluate("Array.from(document.querySelectorAll('form input')).map(e=>e.name).filter(Boolean)")
-        for n, v in (("old_password", active), ("new_password1", new_pw), ("new_password2", new_pw)):
-            if n in names:
-                await pg.fill(f'input[name="{n}"]', v)
-        await pg.click('input[name="new_password1"] >> xpath=ancestor::form//*[@type="submit"]')
-        await pg.wait_for_load_state("networkidle")
-        await pg.wait_for_timeout(1500)
-        errs = await pg.evaluate("Array.from(document.querySelectorAll('.errorlist li,.alert-danger,.has-error .help-block,.invalid-feedback,.text-danger')).map(e=>e.textContent.trim()).filter(Boolean)")
-        pw_ok = await login(pg, ctx, new_pw)
-        print(f"パスワード変更: {'OK' if pw_ok else 'NG'} errors={errs[:3]}")
+        if cmd in ("rotate", "password"):
+          new_pw = secrets.token_urlsafe(18)
+          await pg.goto(HOST + "/accounts/password/", wait_until="networkidle", timeout=60000)
+          names = await pg.evaluate("Array.from(document.querySelectorAll('form input')).map(e=>e.name).filter(Boolean)")
+          for n, v in (("old_password", active), ("password", active), ("new_password1", new_pw), ("new_password2", new_pw)):
+              if n in names:
+                  await pg.fill(f'input[name="{n}"]', v)
+          if "regenerate_api_key" in names:  # 既に token で再生成済みなので、ここでは再生成しない
+              await pg.uncheck('input[name="regenerate_api_key"]')
+          await pg.click('input[name="new_password1"] >> xpath=ancestor::form//*[@type="submit"]')
+          await pg.wait_for_load_state("networkidle")
+          await pg.wait_for_timeout(1500)
+          errs = await pg.evaluate("Array.from(document.querySelectorAll('.errorlist li,.alert-danger,.has-error .help-block,.invalid-feedback,.text-danger')).map(e=>e.textContent.trim()).filter(Boolean)")
+          pw_ok = await login(pg, ctx, new_pw)
+          print(f"パスワード変更: {'OK' if pw_ok else 'NG'} errors={errs[:3]}")
         final_pw = new_pw if pw_ok else active
         base = envs[".env"] or next(iter(envs.values()))
         base = dict(base, WEBLATE_USER=USER, WEBLATE_PASSWORD=final_pw)
