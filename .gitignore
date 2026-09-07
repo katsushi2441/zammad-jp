@@ -5,3 +5,5 @@ translate*.log
 .env
 .env.*
 !.env.example
+.weblate_state.json
+outputs/
