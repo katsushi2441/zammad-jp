@@ -13,7 +13,7 @@ from playwright.async_api import async_playwright
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HOST = "https://translations.zammad.org"
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
-ENV_FILES = [".env", ".env.local.bak"]
+ENV_FILES = [".env", ".env.prev", ".env.local.bak"]
 
 
 def load(path):
